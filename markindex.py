@@ -4,6 +4,10 @@ from __future__ import unicode_literals, print_function
 import argparse
 import re
 import os
+import sys
+if sys.version_info.major == 2:
+    FileNotFoundError = IOError
+
 try:
     from typing import List, Tuple, Optional
 except ImportError:
@@ -16,7 +20,6 @@ class IndexCursor:
     def __init__(self):
         self.data = [0]
         self.level = 2
-        self.cursor = 0
 
     def encount(self, level):
         if level == 1:
@@ -32,15 +35,13 @@ class IndexCursor:
 
     def into(self):
         self.data.append(1)
-        self.cursor += 1
 
     def out(self):
         self.data.pop(-1)
-        self.cursor -= 1
         self.more()
 
     def more(self):
-        self.data[self.cursor] += 1
+        self.data[-1] += 1
 
     def get_index(self):
         return '.'.join(map(lambda x: str(x), self.data))
@@ -48,9 +49,9 @@ class IndexCursor:
 def init_parser():
     """init a standard parser for this script"""
     parser = argparse.ArgumentParser(description='Add Index to markdown titles.')
-    parser.add_argument('--rm', action='store_true', dest='rm',
+    parser.add_argument('-r', '--rm', action='store_true', dest='rm',
                         help='remove index, instead of adding it.')
-    parser.add_argument('--cover', action='store_true', dest='cover',
+    parser.add_argument('-f', '--force', action='store_true', dest='cover',
                         help='cover the original file, use with caution.')
     parser.add_argument('markdown', nargs='+',
                         help='markdown files to modify')
@@ -146,10 +147,10 @@ def handle_markdown(path, args):
         with open(path, 'r') as f:
             lines = f.readlines()  # type: List[str]
     except FileNotFoundError:
-        print("file {} not exist, skipping...")
+        print("file {} not exist, skipping...".format(path))
         return False
     except PermissionError:
-        print("file {} no permission to read, skipping...")
+        print("file {} no permission to read, skipping...".format(path))
         return False
     handled = handle_lines(lines, args)
     save_path = (path if args.cover else choose_avaliable_path(path))
